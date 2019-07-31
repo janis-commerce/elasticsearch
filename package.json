@@ -32,6 +32,9 @@
     "test": "tests"
   },
   "dependencies": {
-    "elasticsearch": "^16.3.0"
+    "@elastic/elasticsearch": "^6.7.2",
+    "aws-sdk": "^2.503.0",
+    "elasticsearch": "^16.3.0",
+    "http-aws-es": "^6.0.0"
   }
 }
