@@ -18,28 +18,16 @@ class Model {
 
 	static get fields() {
 		return [
+			'id',
 			'value',
 			{ othervalue: 'integer' }
 		];
 	}
 }
 
-const elasticStub = sandbox.stub();
-
-sandbox.stub(elasticsearch, 'Client').returns({
-	indices: elasticStub,
-	create: elasticStub,
-	bulk: elasticStub,
-	search: elasticStub,
-	count: elasticStub,
-	updateByQuery: elasticStub,
-	update: elasticStub,
-	deleteByQuery: elasticStub
-});
-
-const elastic = new ElasticSearch({});
-
 const model = new Model();
+
+const elastic = new ElasticSearch();
 
 const expectedParamsBase = {
 	index: model.constructor.table,
@@ -47,7 +35,24 @@ const expectedParamsBase = {
 	body: {}
 };
 
+const elasticStub = sandbox.stub();
+
+const ElasticClientMock = function() {
+	this.indices = elasticStub;
+	this.create = elasticStub;
+	this.bulk = elasticStub;
+	this.search = elasticStub;
+	this.count = elasticStub;
+	this.updateByQuery = elasticStub;
+	this.update = elasticStub;
+	this.deleteByQuery = elasticStub;
+};
+
 describe('ElasticSearch', () => {
+
+	beforeEach(() => {
+		elasticsearch.Client = ElasticClientMock;
+	});
 
 	afterEach(() => {
 		sandbox.reset();
@@ -57,11 +62,51 @@ describe('ElasticSearch', () => {
 		sandbox.restore();
 	});
 
+	describe('Constructor', () => {
+
+		it('should throw when the config is not valid (not an object or array)', async () => {
+
+			assert.throws(() => new ElasticSearch('config'), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.INVALID_CONFIG
+			});
+
+			assert.throws(() => new ElasticSearch(['config']), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.INVALID_CONFIG
+			});
+		});
+	});
+
+	describe('getClient()', () => {
+
+		it('should create the elasticsearch client using AWS', async () => {
+
+			delete elastic.client;
+
+			const stub = sandbox.stub(elasticsearch, 'Client').returns({});
+
+
+		});
+
+		it('should throw when elasticsearch client fails', async () => {
+
+			delete elastic.client;
+
+			sandbox.stub(elasticsearch, 'Client').throws();
+
+			assert.throws(() => elastic.getClient(), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
+			});
+		});
+	});
+
 	describe('buildIndex()', () => {
 
 		it('should create an index (if not exists) and put the mappings parsed from the model into it', async () => {
 
-			elasticStub.exists = sandbox.stub().returns(false);
+			elasticStub.exists = sandbox.stub().returns({ body: false });
 			elasticStub.create = sandbox.stub();
 			elasticStub.putMapping = sandbox.stub();
 
@@ -77,7 +122,7 @@ describe('ElasticSearch', () => {
 
 		it('should put the mappings parsed from the model into the specified index when it already exists', async () => {
 
-			elasticStub.exists = sandbox.stub().returns(true);
+			elasticStub.exists = sandbox.stub().returns({ body: true });
 			elasticStub.putMapping = sandbox.stub();
 
 			await assert.doesNotReject(elastic.buildIndex(model));
@@ -233,7 +278,7 @@ describe('ElasticSearch', () => {
 				},
 				filters: {
 					value: { $in: 'foobar' },
-					othervalue: 1
+					othervalue: { $in: 1 }
 				}
 			});
 
@@ -269,21 +314,33 @@ describe('ElasticSearch', () => {
 
 		it('should return the totals object with paging info', async () => {
 
+			model.lastQueryEmpty = false;
+			delete model.totalsParams; // Remove any previous params for getTotals
+
 			elasticStub.returns({
 				body: {
-					hits: {
-						hits: [
-							{ _source: { id: 1, value: 'somevalue' } },
-							{ _source: { id: 2, value: 'someothervalue' } }
-						],
-						total: 2
-					}
+					count: 1
 				}
 			});
 
-			await elastic.get(model, { limit: 1, page: 1 });
+			assert.deepEqual(await elastic.getTotals(model), {
+				total: 1,
+				pageSize: 500,
+				pages: 1,
+				page: 1
+			});
 
-			elasticStub.reset();
+			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
+			sandbox.assert.calledOnce(elasticStub);
+		});
+
+		it('should return the totals using the last available page if the specified page not exists', async () => {
+
+			model.lastQueryEmpty = false;
+			model.totalsParams = {
+				limit: 1,
+				page: 3
+			};
 
 			elasticStub.returns({
 				body: {
@@ -295,14 +352,25 @@ describe('ElasticSearch', () => {
 				total: 2,
 				pageSize: 1,
 				pages: 2,
-				page: 1
+				page: 2
 			});
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
+		it('should return default totals without calling count method if the latest get was empty', async () => {
+
+			model.lastQueryEmpty = true;
+
+			assert.deepStrictEqual(await elastic.getTotals(model), { total: 0, pages: 0 });
+
+			sandbox.assert.notCalled(elasticStub);
+		});
+
 		it('should throw elasticsearch error when the count process rejects', async () => {
+
+			model.lastQueryEmpty = false;
 
 			elasticStub.rejects();
 
@@ -455,15 +523,6 @@ describe('ElasticSearch', () => {
 		});
 	});
 
-	describe('getClient()', () => {
-
-		it('should throw elasticsearch error when client rejects', async () => {
-
-
-		});
-
-	});
-
 	describe('validateModel()', () => {
 
 		it('should throw an invalid model error with \'empty model\' message when the model not exists', async () => {
@@ -482,6 +541,75 @@ describe('ElasticSearch', () => {
 				message: 'Invalid model',
 				code: ElasticSearchError.codes.INVALID_MODEL
 			});
+		});
+
+		it('should throw an invalid model error when the fields getter in the model is not valid', async () => {
+
+			class OtherModel extends Model {
+				static get fields() {
+					return 'field';
+				}
+			}
+
+			assert.throws(() => elastic.validateModel(new OtherModel()), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.INVALID_MODEL
+			});
+		});
+	});
+
+	describe('Parsers', () => {
+
+		describe('getMappingsFromModel', () => {
+
+			it('should get the fields from the model and convert it into an elasticsearch mapping query', async () => {
+
+				class OtherModel extends Model {
+					static get fields() {
+						return [
+							'value'
+						];
+					}
+				}
+
+				assert.deepStrictEqual(elastic.getMappingsFromModel(new OtherModel()), {
+					properties: {
+						value: {
+							type: 'text',
+							fields: {
+								raw: {
+									type: 'keyword'
+								}
+							}
+						},
+						id: {
+							type: 'text',
+							fields: {
+								raw: {
+									type: 'keyword'
+								}
+							}
+						},
+						dateCreated: {
+							type: 'date',
+							fields: {
+								raw: {
+									type: 'date'
+								}
+							}
+						},
+						lastModified: {
+							type: 'date',
+							fields: {
+								raw: {
+									type: 'date'
+								}
+							}
+						}
+					}
+				});
+			});
+
 		});
 
 	});
