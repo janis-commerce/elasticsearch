@@ -78,15 +78,59 @@ describe('ElasticSearch', () => {
 		});
 	});
 
+	describe('userPrefix()', () => {
+
+		it('should generate the user prefix for the elasticsearch URL path', async () => {
+
+			elastic.config.user = 'user';
+			elastic.config.password = 'password';
+
+			assert.deepStrictEqual(elastic.userPrefix, 'user:password@');
+
+		});
+
+		it('should generate an empty user prefix when the user config is empty', async () => {
+
+			elastic.config.user = '';
+			assert.deepStrictEqual(elastic.userPrefix, '');
+		});
+
+	});
+
 	describe('getClient()', () => {
 
 		it('should create the elasticsearch client using AWS', async () => {
 
 			delete elastic.client;
 
+			elastic.config.awsCredentials = true;
+
 			const stub = sandbox.stub(elasticsearch, 'Client').returns({});
 
+			assert.doesNotThrow(() => elastic.getClient());
 
+			sandbox.assert.calledOnce(stub);
+			sandbox.assert.calledWithMatch(stub, {
+				amazonES: {
+					credentials: {}
+				},
+				connectionClass: {}
+			});
+		});
+
+		it('should create the elasticsearch client with specified port if exists', async () => {
+
+			delete elastic.client;
+
+			elastic.config.awsCredentials = false;
+			elastic.config.port = 9300;
+
+			const stub = sandbox.stub(elasticsearch, 'Client').returns({});
+
+			assert.doesNotThrow(() => elastic.getClient());
+
+			sandbox.assert.calledOnce(stub);
+			sandbox.assert.calledWithMatch(stub, { node: 'http://localhost:9300' });
 		});
 
 		it('should throw when elasticsearch client fails', async () => {
@@ -98,6 +142,41 @@ describe('ElasticSearch', () => {
 			assert.throws(() => elastic.getClient(), {
 				name: 'ElasticSearchError',
 				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
+			});
+		});
+	});
+
+	describe('validateModel()', () => {
+
+		it('should throw an invalid model error with \'empty model\' message when the model not exists', async () => {
+
+			assert.throws(() => elastic.validateModel(), {
+				name: 'ElasticSearchError',
+				message: 'Empty model',
+				code: ElasticSearchError.codes.INVALID_MODEL
+			});
+		});
+
+		it('should throw an invalid model error with \'invalid model\' message when the model is incomplete or bad formatted', async () => {
+
+			assert.throws(() => elastic.validateModel({}), {
+				name: 'ElasticSearchError',
+				message: 'Invalid model',
+				code: ElasticSearchError.codes.INVALID_MODEL
+			});
+		});
+
+		it('should throw an invalid model error when the fields getter in the model is not valid', async () => {
+
+			class OtherModel extends Model {
+				static get fields() {
+					return 'field';
+				}
+			}
+
+			assert.throws(() => elastic.validateModel(new OtherModel()), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.INVALID_MODEL
 			});
 		});
 	});
@@ -277,7 +356,7 @@ describe('ElasticSearch', () => {
 					value: 'asc'
 				},
 				filters: {
-					value: { $in: 'foobar' },
+					value: { $in: ['foobar'] },
 					othervalue: { $in: 1 }
 				}
 			});
@@ -523,95 +602,33 @@ describe('ElasticSearch', () => {
 		});
 	});
 
-	describe('validateModel()', () => {
+	describe('getMappingsFromModel', () => {
 
-		it('should throw an invalid model error with \'empty model\' message when the model not exists', async () => {
-
-			assert.throws(() => elastic.validateModel(), {
-				name: 'ElasticSearchError',
-				message: 'Empty model',
-				code: ElasticSearchError.codes.INVALID_MODEL
-			});
-		});
-
-		it('should throw an invalid model error with \'invalid model\' message when the model is incomplete or bad formatted', async () => {
-
-			assert.throws(() => elastic.validateModel({}), {
-				name: 'ElasticSearchError',
-				message: 'Invalid model',
-				code: ElasticSearchError.codes.INVALID_MODEL
-			});
-		});
-
-		it('should throw an invalid model error when the fields getter in the model is not valid', async () => {
+		it('should get the fields from the model and convert it into an elasticsearch mapping query', async () => {
 
 			class OtherModel extends Model {
 				static get fields() {
-					return 'field';
+					return [
+						'value'
+					];
 				}
 			}
 
-			assert.throws(() => elastic.validateModel(new OtherModel()), {
-				name: 'ElasticSearchError',
-				code: ElasticSearchError.codes.INVALID_MODEL
-			});
-		});
-	});
-
-	describe('Parsers', () => {
-
-		describe('getMappingsFromModel', () => {
-
-			it('should get the fields from the model and convert it into an elasticsearch mapping query', async () => {
-
-				class OtherModel extends Model {
-					static get fields() {
-						return [
-							'value'
-						];
-					}
-				}
-
-				assert.deepStrictEqual(elastic.getMappingsFromModel(new OtherModel()), {
-					properties: {
-						value: {
-							type: 'text',
-							fields: {
-								raw: {
-									type: 'keyword'
-								}
-							}
-						},
-						id: {
-							type: 'text',
-							fields: {
-								raw: {
-									type: 'keyword'
-								}
-							}
-						},
-						dateCreated: {
-							type: 'date',
-							fields: {
-								raw: {
-									type: 'date'
-								}
-							}
-						},
-						lastModified: {
-							type: 'date',
-							fields: {
-								raw: {
-									type: 'date'
-								}
+			sandbox.assert.match(elastic.getMappingsFromModel(new OtherModel()), {
+				properties: {
+					value: {
+						type: 'text',
+						fields: {
+							raw: {
+								type: 'keyword'
 							}
 						}
-					}
-				});
+					},
+					id: {},
+					dateCreated: {},
+					lastModified: {}
+				}
 			});
-
 		});
-
 	});
-
 });
