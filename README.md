@@ -39,7 +39,7 @@ Constructs the Elasticsearch driver instance, connected with the `config [Object
 ### ***async*** `buildIndex(model)`
 
 Puts the elasticsearch mappings obtained from the model, needed for sorting operations.  
-**This method must be used one time, when a new table (elasticsearch index) is created.**  
+**This method must be used once, only when a new table (elasticsearch index) is created.**  
 **Is strongly recommended the usage of this method before any other operation.**
 
 **Model example for this method:**
@@ -62,7 +62,7 @@ class MyModel extends Model{
 }
 ```
 
-**Important:** If you define the `id` field as non text format may cause errors if you do an insertion operation without specifing the `id` field due the generated `id` will be in text format.  
+**Important:** If you define the `id` field as non text format may cause errors if you do an insertion operation without specifing the `id` field, due the generated `id` will be in text format.  
 
 ### ***async*** `insert(model, {item})`
 
