@@ -62,7 +62,7 @@ class MyModel extends Model{
 }
 ```
 
-**Important:** If you define the `id` field as non text format may cause errors if you do an insertion operation without specifing the `id` field, due the generated `id` will be in text format.  
+**Important:** If you define the `id` field as non text format may cause errors if you do an insertion operation without specifing the `id` field due the generated `id` will be in text format.  
 
 ### ***async*** `insert(model, {item})`
 
