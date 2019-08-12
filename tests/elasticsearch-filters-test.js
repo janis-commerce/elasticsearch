@@ -30,10 +30,10 @@ describe('ElasticSearchFilters', () => {
 				query: {
 					bool: {
 						must: [
-							{ term: { 'field.raw': 'value' } },	{ term: { field: 'value' } }
+							{ term: { 'field.raw': 'value' } },	{ terms: { field: ['value'] } }
 						],
 						must_not: [
-							{ term: { 'field.raw': 'value' } }, { term: { field: 'value' } }
+							{ term: { 'field.raw': 'value' } }, { terms: { field: ['value'] } }
 						]
 					}
 				}
@@ -105,7 +105,7 @@ describe('ElasticSearchFilters', () => {
 				query: {
 					bool: {
 						must: [
-							{ term: { 'field.raw': 'value' } },	{ term: { field: 'value' } },
+							{ term: { 'field.raw': 'value' } },	{ terms: { field: ['value'] } },
 							{
 								range: {
 									id: {
@@ -118,7 +118,7 @@ describe('ElasticSearchFilters', () => {
 							}
 						],
 						must_not: [
-							{ term: { 'field.raw': 'value' } }, { term: { field: 'value' } }
+							{ term: { 'field.raw': 'value' } }, { terms: { field: ['value'] } }
 						]
 					}
 				}
