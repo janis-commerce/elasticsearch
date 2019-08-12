@@ -62,6 +62,16 @@ class MyModel extends Model{
 }
 ```
 
+**Elasticsearch basic field datatypes:**  
+
+- **String:** text, keyword  
+- **Numeric:** long, integer, short, byte, double, float, half_float, scaled_float  
+- **Date:** date  
+- **Date nanoseconds:** date_nanos  
+- **Boolean:** boolean  
+- **Binary:** binary  
+- **Range:** integer_range, float_range, long_range, double_range, date_range  
+
 **Important:** If you define the `id` field as non text format may cause errors if you do an insertion operation without specifing the `id` field due the generated `id` will be in text format.  
 
 ### ***async*** `insert(model, {item})`
