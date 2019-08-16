@@ -1,3 +1,5 @@
+/* eslint-disable no-underscore-dangle */
+
 'use strict';
 
 const assert = require('assert');
@@ -16,12 +18,12 @@ class Model {
 		return 'table';
 	}
 
-	static get fields() {
-		return [
-			'id',
-			'value',
-			{ othervalue: 'integer' }
-		];
+	static get sortableFields() {
+		return {
+			id: true,
+			value: true,
+			othervalue: { type: 'integer' }
+		};
 	}
 }
 
@@ -76,38 +78,58 @@ describe('ElasticSearch', () => {
 				code: ElasticSearchError.codes.INVALID_CONFIG
 			});
 		});
+
+		it('should get the protocol from the host url and set into the config when it exists', () => {
+
+			const newElastic = new ElasticSearch({
+				protocol: 'myprotocol://',
+				host: 'urlprotocol://host.com'
+			});
+
+			assert(newElastic.config.protocol === 'urlprotocol://');
+		});
+
+		it('should use the specified protocol when the host url does not include it', () => {
+
+			const newElastic = new ElasticSearch({
+				protocol: 'protocol://',
+				host: 'my-host.com'
+			});
+
+			assert(newElastic.config.protocol === 'protocol://');
+		});
 	});
 
-	describe('userPrefix()', () => {
+	describe('_userPrefix', () => {
 
 		it('should generate the user prefix for the elasticsearch URL path', async () => {
 
 			elastic.config.user = 'user';
 			elastic.config.password = 'password';
 
-			assert.deepStrictEqual(elastic.userPrefix, 'user:password@');
+			assert.deepStrictEqual(elastic._userPrefix, 'user:password@');
 
 		});
 
 		it('should generate an empty user prefix when the user config is empty', async () => {
 
 			elastic.config.user = '';
-			assert.deepStrictEqual(elastic.userPrefix, '');
+			assert.deepStrictEqual(elastic._userPrefix, '');
 		});
 
 	});
 
-	describe('getClient()', () => {
+	describe('client', () => {
 
 		it('should create the elasticsearch client using AWS', async () => {
 
-			delete elastic.client;
+			delete elastic._client;
 
 			elastic.config.awsCredentials = true;
 
 			const stub = sandbox.stub(elasticsearch, 'Client').returns({});
 
-			assert.doesNotThrow(() => elastic.getClient());
+			assert.doesNotThrow(() => elastic.client);
 
 			sandbox.assert.calledOnce(stub);
 			sandbox.assert.calledWithMatch(stub, {
@@ -120,14 +142,14 @@ describe('ElasticSearch', () => {
 
 		it('should create the elasticsearch client with specified port if exists', async () => {
 
-			delete elastic.client;
+			delete elastic._client;
 
 			elastic.config.awsCredentials = false;
 			elastic.config.port = 9300;
 
 			const stub = sandbox.stub(elasticsearch, 'Client').returns({});
 
-			assert.doesNotThrow(() => elastic.getClient());
+			assert.doesNotThrow(() => elastic.client);
 
 			sandbox.assert.calledOnce(stub);
 			sandbox.assert.calledWithMatch(stub, { node: 'http://localhost:9300' });
@@ -135,22 +157,22 @@ describe('ElasticSearch', () => {
 
 		it('should throw when elasticsearch client fails', async () => {
 
-			delete elastic.client;
+			delete elastic._client;
 
 			sandbox.stub(elasticsearch, 'Client').throws();
 
-			assert.throws(() => elastic.getClient(), {
+			assert.throws(() => elastic.client, {
 				name: 'ElasticSearchError',
 				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
 			});
 		});
 	});
 
-	describe('validateModel()', () => {
+	describe('_validateModel()', () => {
 
 		it('should throw an invalid model error with \'empty model\' message when the model not exists', async () => {
 
-			assert.throws(() => elastic.validateModel(), {
+			assert.throws(() => elastic._validateModel(), {
 				name: 'ElasticSearchError',
 				message: 'Empty model',
 				code: ElasticSearchError.codes.INVALID_MODEL
@@ -159,7 +181,7 @@ describe('ElasticSearch', () => {
 
 		it('should throw an invalid model error with \'invalid model\' message when the model is incomplete or bad formatted', async () => {
 
-			assert.throws(() => elastic.validateModel({}), {
+			assert.throws(() => elastic._validateModel({}), {
 				name: 'ElasticSearchError',
 				message: 'Invalid model',
 				code: ElasticSearchError.codes.INVALID_MODEL
@@ -169,12 +191,12 @@ describe('ElasticSearch', () => {
 		it('should throw an invalid model error when the fields getter in the model is not valid', async () => {
 
 			class OtherModel extends Model {
-				static get fields() {
-					return 'field';
+				static get sortableFields() {
+					return ['field'];
 				}
 			}
 
-			assert.throws(() => elastic.validateModel(new OtherModel()), {
+			assert.throws(() => elastic._validateModel(new OtherModel()), {
 				name: 'ElasticSearchError',
 				code: ElasticSearchError.codes.INVALID_MODEL
 			});
@@ -196,7 +218,7 @@ describe('ElasticSearch', () => {
 				sandbox.assert.calledOnce(stub);
 			});
 
-			sandbox.assert.calledWithMatch(elasticStub.putMapping, expectedParamsBase);
+			sandbox.assert.calledWithMatch(elasticStub.putMapping, { index: model.constructor.table, body: { properties: {} } });
 		});
 
 		it('should put the mappings parsed from the model into the specified index when it already exists', async () => {
@@ -209,7 +231,7 @@ describe('ElasticSearch', () => {
 			sandbox.assert.calledWithExactly(elasticStub.exists, { index: model.constructor.table });
 			sandbox.assert.calledOnce(elasticStub.exists);
 
-			sandbox.assert.calledWithMatch(elasticStub.putMapping, expectedParamsBase);
+			sandbox.assert.calledWithMatch(elasticStub.putMapping, { index: model.constructor.table, body: { properties: {} } });
 		});
 
 		it('should throw elasticsearch error when any of the operations rejects', async () => {
@@ -239,6 +261,27 @@ describe('ElasticSearch', () => {
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
+		it('should leave untouched the field dateCreated of the item when it already exists', async () => {
+
+			elasticStub.returns({
+				body: {
+					result: 'created'
+				}
+			});
+
+			assert(await elastic.insert(model, { id: 1, item: 'value', dateCreated: 'myDate' }));
+
+			sandbox.assert.calledWithMatch(elasticStub, {
+				...expectedParamsBase,
+				body: {
+					id: 1,
+					item: 'value',
+					dateCreated: 'myDate'
+				}
+			});
+			sandbox.assert.calledOnce(elasticStub);
+		});
+
 		it('should return false when the insert process fails', async () => {
 
 			elasticStub.returns({
@@ -253,13 +296,23 @@ describe('ElasticSearch', () => {
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
-		it('should throw elasticsearch error when the insert process rejects', async () => {
+		it('should return false when the insert process rejects', async () => {
 
 			elasticStub.rejects();
 
+			await assert(elastic.insert(model, { item: 'value' }), false);
+
+			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
+			sandbox.assert.calledOnce(elasticStub);
+		});
+
+		it('should throw when the insert process rejects due a duplicated ID field', async () => {
+
+			elasticStub.rejects(new Error('version_conflict_engine_exception'));
+
 			await assert.rejects(elastic.insert(model, { item: 'value' }), {
 				name: 'ElasticSearchError',
-				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
+				code: ElasticSearchError.codes.INVALID_QUERY
 			});
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
@@ -269,21 +322,40 @@ describe('ElasticSearch', () => {
 
 	describe('multiInsert', () => {
 
-		const items = [
-			{ id: 1, value: 'something' },
-			{ value: 'someothervalue' },
-			{ value: 'foobar', othervalue: 32 }
-		];
-
 		it('should return true when bulk insert process is successful', async () => {
 
 			elasticStub.returns({
 				errors: false
 			});
 
-			assert(await elastic.multiInsert(model, items));
+			assert(await elastic.multiInsert(model, [{ id: 1, value: 'something' }, { id: 2, value: 'something' }]));
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
+			sandbox.assert.calledOnce(elasticStub);
+		});
+
+		it('should leave untouched the field dateCreated of the item when it already exists', async () => {
+
+			elasticStub.returns({
+				body: {
+					errors: false
+				}
+			});
+
+			assert(await elastic.multiInsert(model, { value: 'foobar', dateCreated: 'myDate' }));
+
+			sandbox.assert.calledWithMatch(elasticStub, {
+				...expectedParamsBase,
+				refresh: 'wait_for',
+				body: [
+					{ index: sandbox.match.object },
+					{
+						dateCreated: 'myDate',
+						id: sandbox.match.string,
+						value: 'foobar'
+					}
+				]
+			});
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
@@ -293,19 +365,29 @@ describe('ElasticSearch', () => {
 				errors: true
 			});
 
-			assert(!await elastic.multiInsert(model, items));
+			assert(!await elastic.multiInsert(model, [{ id: 1, value: 'something' }]));
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
-		it('should throw elasticsearch error when bulk insert process rejects', async () => {
+		it('should return false when bulk insert process rejects', async () => {
 
 			elasticStub.rejects();
 
-			await assert.rejects(elastic.multiInsert(model, items), {
+			assert(!await elastic.multiInsert(model, [{ id: 1, value: 'something' }]));
+
+			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
+			sandbox.assert.calledOnce(elasticStub);
+		});
+
+		it('should throw elasticsearch error when bulk insert process rejects due a duplicated ID field', async () => {
+
+			elasticStub.rejects(new Error('version_conflict_engine_exception'));
+
+			await assert.rejects(elastic.multiInsert(model, [{ id: 1, value: 'something' }]), {
 				name: 'ElasticSearchError',
-				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
+				code: ElasticSearchError.codes.INVALID_QUERY
 			});
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
@@ -394,7 +476,7 @@ describe('ElasticSearch', () => {
 		it('should return the totals object with paging info', async () => {
 
 			model.lastQueryEmpty = false;
-			delete model.totalsParams; // Remove any previous params for getTotals
+			delete model.totalsParams;
 
 			elasticStub.returns({
 				body: {
@@ -418,7 +500,10 @@ describe('ElasticSearch', () => {
 			model.lastQueryEmpty = false;
 			model.totalsParams = {
 				limit: 1,
-				page: 3
+				page: 3,
+				filters: {
+					field: 'value'
+				}
 			};
 
 			elasticStub.returns({
@@ -470,7 +555,11 @@ describe('ElasticSearch', () => {
 				}
 			});
 
-			assert(await elastic.update(model, { value: 'mynewvalue' }, { value: 'myoldvalue' }) === 5);
+			assert(await elastic.update(model, {
+				value: 'mynewvalue',
+				othervalue: 5,
+				anothervalue: ['some', 'array']
+			}, { id: 1 }) === 5);
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
 			sandbox.assert.calledOnce(elasticStub);
@@ -506,7 +595,29 @@ describe('ElasticSearch', () => {
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
-		it('should return false when the upsert process is sucessful', async () => {
+		it('should leave untouched the field dateCreated of the item when it already exists', async () => {
+
+			elasticStub.returns({
+				body: {
+					result: 'created'
+				}
+			});
+
+			assert(await elastic.save(model, { value: 'foobar', dateCreated: 'myDate' }));
+
+			sandbox.assert.calledWithMatch(elasticStub, {
+				...expectedParamsBase,
+				body: {
+					upsert: {
+						value: 'foobar',
+						dateCreated: 'myDate'
+					}
+				}
+			});
+			sandbox.assert.calledOnce(elasticStub);
+		});
+
+		it('should return false when the upsert process fails', async () => {
 
 			elasticStub.returns({
 				body: {
@@ -520,11 +631,11 @@ describe('ElasticSearch', () => {
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
-		it('should throw elasticsearch error when the upsert process rejects', async () => {
+		it('should return false when the upsert process rejects', async () => {
 
 			elasticStub.rejects();
 
-			await assert.rejects(elastic.save(model, { value: 'foobar' }));
+			assert(!await elastic.save(model, { value: 'foobar' }));
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
 			sandbox.assert.calledOnce(elasticStub);
@@ -541,9 +652,37 @@ describe('ElasticSearch', () => {
 				}
 			});
 
-			assert(await elastic.multiSave(model, [{ value: 'foobar' }]));
+			assert(await elastic.multiSave(model, [{ value: 'foobar' }, { value: 'sarasa' }]));
 
 			sandbox.assert.calledWithMatch(elasticStub, { index: model.constructor.table, refresh: 'wait_for' });
+			sandbox.assert.calledOnce(elasticStub);
+		});
+
+		it('should leave untouched the field dateCreated of the item when it already exists', async () => {
+
+			elasticStub.returns({
+				body: {
+					errors: false
+				}
+			});
+
+			assert(await elastic.multiSave(model, { value: 'foobar', dateCreated: 'myDate' }));
+
+			sandbox.assert.calledWithMatch(elasticStub, {
+				index: model.constructor.table,
+				refresh: 'wait_for',
+				body: [
+					{ update: sandbox.match.object },
+					{
+						doc: sandbox.match.object,
+						upsert: {
+							dateCreated: 'myDate',
+							id: sandbox.match.string,
+							value: 'foobar'
+						}
+					}
+				]
+			});
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
@@ -561,11 +700,11 @@ describe('ElasticSearch', () => {
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
-		it('should throw elasticsearch error when the bulk upsert process rejects', async () => {
+		it('should return false when the bulk upsert process rejects', async () => {
 
 			elasticStub.rejects();
 
-			await assert.rejects(elastic.multiSave(model, [{ value: 'foobar' }]));
+			assert(!await elastic.multiSave(model, [{ value: 'foobar' }]));
 
 			sandbox.assert.calledWithMatch(elasticStub, { index: model.constructor.table, refresh: 'wait_for' });
 			sandbox.assert.calledOnce(elasticStub);
@@ -602,19 +741,51 @@ describe('ElasticSearch', () => {
 		});
 	});
 
-	describe('getMappingsFromModel', () => {
+	describe('_prepareFields()', () => {
+
+		it('should generate the id field of an item when it not exists', () => {
+
+			sandbox.assert.match(
+				elastic._prepareFields({ field: 'value' }),
+				{
+					id: sandbox.match.string,
+					field: 'value'
+				}
+			);
+
+		});
+
+		it('should return an array when recieves multiple items', async () => {
+
+			sandbox.assert.match(
+				elastic._prepareFields([
+					{ id: 1, field: 'value' },
+					{ field: 'value' }
+				]),
+				[
+					{ id: 1, field: 'value' },
+					{ id: sandbox.match.string, field: 'value' }
+				]
+			);
+
+		});
+
+	});
+
+	describe('_getMappingsFromModel()', () => {
 
 		it('should get the fields from the model and convert it into an elasticsearch mapping query', async () => {
 
 			class OtherModel extends Model {
-				static get fields() {
-					return [
-						'value'
-					];
+				static get sortableFields() {
+					return {
+						value: { type: 'text' },
+						dateCreated: true
+					};
 				}
 			}
 
-			sandbox.assert.match(elastic.getMappingsFromModel(new OtherModel()), {
+			sandbox.assert.match(elastic._getMappingsFromModel(new OtherModel()), {
 				properties: {
 					value: {
 						type: 'text',
@@ -624,11 +795,12 @@ describe('ElasticSearch', () => {
 							}
 						}
 					},
-					id: {},
-					dateCreated: {},
-					lastModified: {}
+					dateCreated: {
+						type: 'text'
+					}
 				}
 			});
 		});
 	});
+
 });
