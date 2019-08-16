@@ -16,7 +16,7 @@ Constructs the Elasticsearch driver instance, connected with the `config [Object
 
 **Config definition:**  
 - protocol `[String]`: The protocol for the elasticsearch host url, not needed if you use a full url as host.  
-- host `[String]`: Elasticsearch host URL.  
+- host `[String]`: Elasticsearch host URL. **In case of the host url includes a protocol, it will replace the actual protocol value in the config**.  
 - port `[Number]`: The port for the elasticsearch host url, not needed if you use a full url as host.  
 - user `[String]`: Elasticsearch user for the host.  
 - password `[String]`: Elasticsearch password for the host.  
@@ -51,13 +51,13 @@ class MyModel extends Model{
 		return 'table'; // The elasticsearch index
 	}
 
-	static get fields() {
-		return [
-			{ id: 'integer' }, // If there is no defined ID field, it will be mapped as text
-			'myfield', // Default will be mapped as text (elasticsearch string)
-			{ myOtherField: 'integer' },
-			{ someOtherField: 'long' }
-		];
+	static get sortableFields() {
+		return {
+			id: { type: 'integer' }, // If there is no defined ID field, it will be mapped as text
+			myfield: true, // Default will be mapped as text (elasticsearch string)
+			myOtherField: { type: 'integer' },
+			someOtherField: { type: 'long' }
+		};
 	}
 }
 ```
@@ -80,11 +80,21 @@ Inserts an item into elasticsearch.
 Requires a `model [Model]` and `item [Object]`  
 Returns `true` if the operation was successful or `false` if not.
 
+**Important:**  
+
+* If your item doesn't have an `id` field, it will be inserted with an auto-generated `id`, using `UUID`.  
+* The `id` field is unique, it cannot be duplicated.  
+
 ### ***async*** `multiInsert(model, [{items}])`
 
 Inserts multiple items into elasticsearch.  
 Requires a `model [Model]` and `items [Object array]`  
 Returns `true` if the operation was successful or `false` if not.
+
+**Important:**  
+
+* Every item that doesn't have an `id` field, will be inserted with an auto-generated `id` using `UUID`.  
+* The `id` field is unique, it cannot be duplicated.  
 
 ### ***async*** `update(model, {values}, {filter})`
 
@@ -94,9 +104,8 @@ Returns the updated count `[Number]`
 
 ### ***async*** `get(model, {params})`
 
-Get items from the database then returns an `[Object array]`
-Requires a `model [Model]` and `items [Object array]`  
-Returns `true` if the operation was successful or `false` if not.  
+Get items from the database then returns an `[Object array]` with the getted items.  
+Requires a `model [Model]` and `params [Object]`  
 
 Parameters (all are optional):  
 * order `[Object]`: Order params for getted items, Example: `{ myField: 'asc', myOtherField: 'desc' }`  
@@ -121,7 +130,7 @@ Parameters (all are optional):
 	filters:{
 		name: 'Edward', // Matches exactly the field, get only the items with 'Edward' in name field
 		$in: {
-			fullname: ['Edward', 'Sanchez'] // Similar as MongoDB, matches the words in the fullname field then gets all items that includes 'Edward' and 'Sanchez' in that field
+			fullname: ['Edward', 'Sanchez'] // Similar as MongoDB, matches any of the words in the fullname field and, in this case, then gets all items that includes 'Edward' or 'Sanchez' in that field
 		},
 		$gt: {
 			id: 10 // Similar as MongoDB, get all items which id field is greater than 10
@@ -175,7 +184,8 @@ The codes are the following:
 |------|--------------------------------|
 | 1    | Invalid config                 |
 | 2    | Invalid model                  |
-| 3    | Internal elasticsearch error   |
+| 3    | Invalid query                  |
+| 4    | Internal elasticsearch error   |
 
 ## Usage
 ```js
