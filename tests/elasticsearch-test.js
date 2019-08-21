@@ -15,7 +15,7 @@ const ElasticSearchError = require('./../lib/elasticsearch-error');
 class Model {
 
 	static get table() {
-		return 'table';
+		return 'myTable';
 	}
 
 	static get sortableFields() {
@@ -32,7 +32,7 @@ const model = new Model();
 const elastic = new ElasticSearch();
 
 const expectedParamsBase = {
-	index: model.constructor.table,
+	index: 'my_table',
 	type: '_doc',
 	body: {}
 };
@@ -214,11 +214,11 @@ describe('ElasticSearch', () => {
 			await assert.doesNotReject(elastic.buildIndex(model));
 
 			[elasticStub.exists, elasticStub.create].forEach(stub => {
-				sandbox.assert.calledWithExactly(stub, { index: model.constructor.table });
+				sandbox.assert.calledWithExactly(stub, { index: expectedParamsBase.index });
 				sandbox.assert.calledOnce(stub);
 			});
 
-			sandbox.assert.calledWithMatch(elasticStub.putMapping, { index: model.constructor.table, body: { properties: {} } });
+			sandbox.assert.calledWithMatch(elasticStub.putMapping, { index: expectedParamsBase.index, body: { properties: {} } });
 		});
 
 		it('should put the mappings parsed from the model into the specified index when it already exists', async () => {
@@ -228,10 +228,10 @@ describe('ElasticSearch', () => {
 
 			await assert.doesNotReject(elastic.buildIndex(model));
 
-			sandbox.assert.calledWithExactly(elasticStub.exists, { index: model.constructor.table });
+			sandbox.assert.calledWithExactly(elasticStub.exists, { index: expectedParamsBase.index });
 			sandbox.assert.calledOnce(elasticStub.exists);
 
-			sandbox.assert.calledWithMatch(elasticStub.putMapping, { index: model.constructor.table, body: { properties: {} } });
+			sandbox.assert.calledWithMatch(elasticStub.putMapping, { index: expectedParamsBase.index, body: { properties: {} } });
 		});
 
 		it('should do nothing when the model doesn\'t have sortable fields', async () => {
@@ -684,7 +684,7 @@ describe('ElasticSearch', () => {
 
 			assert(await elastic.multiSave(model, [{ value: 'foobar' }, { value: 'sarasa' }]));
 
-			sandbox.assert.calledWithMatch(elasticStub, { index: model.constructor.table, refresh: 'wait_for' });
+			sandbox.assert.calledWithMatch(elasticStub, { index: expectedParamsBase.index, refresh: 'wait_for' });
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
@@ -699,7 +699,7 @@ describe('ElasticSearch', () => {
 			assert(await elastic.multiSave(model, { value: 'foobar', dateCreated: 'myDate' }));
 
 			sandbox.assert.calledWithMatch(elasticStub, {
-				index: model.constructor.table,
+				index: expectedParamsBase.index,
 				refresh: 'wait_for',
 				body: [
 					{ update: sandbox.match.object },
@@ -726,7 +726,7 @@ describe('ElasticSearch', () => {
 
 			assert(!await elastic.multiSave(model, [{ value: 'foobar' }]));
 
-			sandbox.assert.calledWithMatch(elasticStub, { index: model.constructor.table, refresh: 'wait_for' });
+			sandbox.assert.calledWithMatch(elasticStub, { index: expectedParamsBase.index, refresh: 'wait_for' });
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
@@ -736,7 +736,7 @@ describe('ElasticSearch', () => {
 
 			assert(!await elastic.multiSave(model, [{ value: 'foobar' }]));
 
-			sandbox.assert.calledWithMatch(elasticStub, { index: model.constructor.table, refresh: 'wait_for' });
+			sandbox.assert.calledWithMatch(elasticStub, { index: expectedParamsBase.index, refresh: 'wait_for' });
 			sandbox.assert.calledOnce(elasticStub);
 		});
 	});
