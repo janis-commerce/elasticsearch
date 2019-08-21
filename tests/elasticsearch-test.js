@@ -234,6 +234,28 @@ describe('ElasticSearch', () => {
 			sandbox.assert.calledWithMatch(elasticStub.putMapping, { index: model.constructor.table, body: { properties: {} } });
 		});
 
+		it('should do nothing when the model doesn\'t have sortable fields', async () => {
+
+			elasticStub.exists = sandbox.stub().returns({ body: false });
+			elasticStub.create = sandbox.stub();
+			elasticStub.putMapping = sandbox.stub();
+
+			class OtherModel {
+				static get table() {
+					return 'table';
+				}
+			}
+
+			await elastic.buildIndex(new OtherModel());
+
+			[elasticStub.exists, elasticStub.create, elasticStub.putMapping].forEach(stub => {
+
+				sandbox.assert.notCalled(stub);
+
+			});
+
+		});
+
 		it('should throw elasticsearch error when any of the operations rejects', async () => {
 
 			elasticStub.exists = sandbox.stub().rejects();
@@ -247,15 +269,17 @@ describe('ElasticSearch', () => {
 
 	describe('insert()', () => {
 
-		it('should return true when the insert process item is successful', async () => {
+		it('should return the inserted item ID when the insert process item is successful', async () => {
 
-			elasticStub.returns({
-				body: {
-					result: 'created'
-				}
+			elasticStub.callsFake(params => {
+				return {
+					body: {
+						_id: params.id
+					}
+				};
 			});
 
-			assert(await elastic.insert(model, { id: 1, item: 'value' }));
+			assert(await elastic.insert(model, { id: 1, item: 'value' }) === 1);
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
 			sandbox.assert.calledOnce(elasticStub);
@@ -263,10 +287,12 @@ describe('ElasticSearch', () => {
 
 		it('should leave untouched the field dateCreated of the item when it already exists', async () => {
 
-			elasticStub.returns({
-				body: {
-					result: 'created'
-				}
+			elasticStub.callsFake(params => {
+				return {
+					body: {
+						_id: params.id
+					}
+				};
 			});
 
 			assert(await elastic.insert(model, { id: 1, item: 'value', dateCreated: 'myDate' }));
@@ -583,10 +609,12 @@ describe('ElasticSearch', () => {
 
 		it('should return true when the upsert process is sucessful', async () => {
 
-			elasticStub.returns({
-				body: {
-					result: 'created'
-				}
+			elasticStub.callsFake(params => {
+				return {
+					body: {
+						_id: params.id
+					}
+				};
 			});
 
 			assert(await elastic.save(model, { value: 'foobar' }));
@@ -597,10 +625,12 @@ describe('ElasticSearch', () => {
 
 		it('should leave untouched the field dateCreated of the item when it already exists', async () => {
 
-			elasticStub.returns({
-				body: {
-					result: 'created'
-				}
+			elasticStub.callsFake(params => {
+				return {
+					body: {
+						_id: params.id
+					}
+				};
 			});
 
 			assert(await elastic.save(model, { value: 'foobar', dateCreated: 'myDate' }));
