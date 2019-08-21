@@ -72,13 +72,16 @@ class MyModel extends Model{
 - **Binary:** binary  
 - **Range:** integer_range, float_range, long_range, double_range, date_range  
 
-**Important:** If you define the `id` field as non text format may cause errors if you do an insertion operation without specifing the `id` field due the generated `id` will be in text format.  
+**Important:**  
+- If you define the `id` field as non text format may cause errors if you do an insertion operation without specifing the `id` field due the generated `id` will be in text format.  
+- The table name from the model will be converted into snake_case due elasticsearch doesn't support camelCase in the index names. 
+- The sortable fields are optional, same as this method, is only required for sorting items in get operations.
 
 ### ***async*** `insert(model, {item})`
 
 Inserts an item into elasticsearch.  
 Requires a `model [Model]` and `item [Object]`  
-Returns `true` if the operation was successful or `false` if not.
+Returns the ID of the inserted item if the operation was successful or `false` if not.
 
 **Important:**  
 
@@ -106,12 +109,13 @@ Returns the updated count `[Number]`
 
 Get items from the database then returns an `[Object array]` with the getted items.  
 Requires a `model [Model]` and `params [Object]`  
+Returns all items if you use without parameters  
 
 Parameters (all are optional):  
 * order `[Object]`: Order params for getted items, Example: `{ myField: 'asc', myOtherField: 'desc' }`  
 * limit `[Number]`: Max amount of items per page to get. Default 500 or setted on config when constructs.  
 * page `[Number]`: Get the items of the specified page.  
-* filters `[Object]`: Search filters, leave empty for all items. **They are pretty similar to MongoDB filters.**  
+* filters `[Object]`: Search filters, leave empty for all items.  
 
 **Filter operators**
 - **$eq**: Matches values that are equal to a specified value.  
@@ -160,7 +164,7 @@ Returns an `[Object]` with the total count, page size, total pages and current p
 
 Insert/update an item into the elasticsearch.  
 Requires a `model [Model]` and `item [Object]`  
-Returns `true` if the operation was successful or `false` if not.  
+Returns the ID of the upserted item if the operation was successful or `false` if not.  
 
 ### ***async*** `multiSave(model, [{items}])`
 
@@ -207,7 +211,7 @@ const model = new Model();
 	let result;
 
 	// insert
-	result = await elastic.insert(model, { id: 1, value 'sarasa' }); // expected return: true
+	result = await elastic.insert(model, { id: 1, value 'sarasa' }); // expected return: 1
 
 	// multiInsert
 	result = await elastic.multiInsert(model, [
@@ -238,7 +242,7 @@ const model = new Model();
 	*/
 
 	// save
-	result = await elastic.save(model, { id: 1, value: 'foobar 1' }); // example return: true
+	result = await elastic.save(model, { id: 1, value: 'foobar 1' }); // example return: 1
 
 	// multiSave
 	result = await elastic.multiSave(model, [
