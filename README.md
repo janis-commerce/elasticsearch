@@ -81,7 +81,7 @@ class MyModel extends Model{
 
 Inserts an item into elasticsearch.  
 Requires a `model [Model]` and `item [Object]`  
-Returns the ID of the inserted item if the operation was successful or `false` if not.
+Returns the ID of the inserted item
 
 **Important:**  
 
@@ -164,7 +164,7 @@ Returns an `[Object]` with the total count, page size, total pages and current p
 
 Insert/update an item into the elasticsearch.  
 Requires a `model [Model]` and `item [Object]`  
-Returns the ID of the upserted item if the operation was successful or `false` if not.  
+Returns the ID of the upserted item  
 
 ### ***async*** `multiSave(model, [{items}])`
 
@@ -225,9 +225,9 @@ const model = new Model();
 
 	// get
 	result = await elastic.get(model, {}); // expected return: all entries array [{item}, {item}...]
-	result = await elastic.get(model, { filters: { id: 1 } }); // expected return: the item with id 1
+	result = await elastic.get(model, { filters: { id: 1 } }); // expected return: an array with the item with id 1
 	result = await elastic.get(model, { limit: 10, page: 2, filters: { value: 'foo' } }); // expected return: the page 2 of the elements with value "foo" with a page size of 10.
-	result = await elastic.get(model, { order: { id: 'asc' } }); // expected return: all entries ordered ascendently by id
+	result = await elastic.get(model, { order: { id: 'asc' } }); // expected return: all entries array ordered ascendently by id
 
 	// getTotals
 	result = await elastic.getTotals(model);
