@@ -4,6 +4,8 @@ const assert = require('assert');
 
 const ElasticSearchFilters = require('./../lib/elasticsearch-filters');
 
+const ElasticSearchError = require('./../lib/elasticsearch-error');
+
 describe('ElasticSearchFilters', () => {
 
 	describe('getFilters()', () => {
@@ -74,15 +76,8 @@ describe('ElasticSearchFilters', () => {
 		it('should return the elasticsearch query (mixed)', () => {
 
 			const mixedFilters = {
-				field: 'value',
-				$eq: {
-					field: 'value'
-				},
 				$ne: {
 					field: 'value'
-				},
-				$in: {
-					field: ['value']
 				},
 				$nin: {
 					field: ['value']
@@ -105,7 +100,6 @@ describe('ElasticSearchFilters', () => {
 				query: {
 					bool: {
 						must: [
-							{ term: { 'field.raw': 'value' } },	{ terms: { field: ['value'] } },
 							{
 								range: {
 									id: {
@@ -125,37 +119,149 @@ describe('ElasticSearchFilters', () => {
 			});
 		});
 
-		it('should ignore the $in and $nin terms when the values is not an array', async () => {
+		it('should throw \'Invalid filters\' when the $in terms values aren\'t an array', async () => {
 
-			const badFilters = {
-				$in: 'not-array',
+			assert.throws(() => ElasticSearchFilters.getFilters({
+				$in: 'not-array'
+			}), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.INVALID_FILTERS
+			});
+
+		});
+
+		it('should throw \'Invalid filters\' when the $nin terms values aren\'t an array', async () => {
+
+			assert.throws(() => ElasticSearchFilters.getFilters({
 				$nin: 'not-array'
-			};
-
-			assert.deepStrictEqual(ElasticSearchFilters.getFilters(badFilters), {
-				query: {
-					bool: {
-						must: [],
-						must_not: []
-					}
-				}
+			}), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.INVALID_FILTERS
 			});
 
 		});
 
 		context('when the recieved filters are invalid', () => {
 
-			it('should return an empty object when whe filters not exists', async () => {
-				assert.deepStrictEqual(ElasticSearchFilters.getFilters(), {});
+			it('should throw \'Invalid filter operator\' when any of the received operator not exists', async () => {
+
+				assert.throws(() => ElasticSearchFilters.getFilters({
+					$eq: { field: 'value' },
+					$eqq: { field: 'value' }
+				}), {
+					name: 'ElasticSearchError',
+					code: ElasticSearchError.codes.INVALID_FILTER_OPERATOR
+				});
+
 			});
 
-			it('should return an empty object when whe filters is not an object', async () => {
-				assert.deepStrictEqual(ElasticSearchFilters.getFilters('filters'), {});
+			it('should throw \'Invalid filters\' when the filters not exists', async () => {
+				assert.throws(() => ElasticSearchFilters.getFilters(), {
+					name: 'ElasticSearchError',
+					code: ElasticSearchError.codes.INVALID_FILTERS
+				});
 			});
 
-			it('should return an empty object when whe filters is an array', async () => {
-				assert.deepStrictEqual(ElasticSearchFilters.getFilters(['filters']), {});
+			it('should throw \'Invalid filters\' when the filters is not an object', async () => {
+				assert.throws(() => ElasticSearchFilters.getFilters('filters'), {
+					name: 'ElasticSearchError',
+					code: ElasticSearchError.codes.INVALID_FILTERS
+				});
 			});
+
+			it('should throw \'Invalid filters\' when the filters is an array', async () => {
+				assert.throws(() => ElasticSearchFilters.getFilters(['filters']), {
+					name: 'ElasticSearchError',
+					code: ElasticSearchError.codes.INVALID_FILTERS
+				});
+			});
+		});
+
+		context('when the parent properties of the parsed filters not exists', () => {
+
+			/* eslint-disable no-underscore-dangle */
+
+			[
+				ElasticSearchFilters._formatEq,
+				ElasticSearchFilters._formatIn
+
+			].forEach(formatter => {
+
+				it('should create the bool property when not exists', () => {
+
+					const parsedFilters = {};
+
+					formatter(parsedFilters, 'field', ['value']);
+
+					assert.strictEqual(typeof parsedFilters.bool, 'object');
+				});
+
+				it('should create the bool.must property when not exists', () => {
+
+					const parsedFilters = {};
+
+					formatter(parsedFilters, 'field', ['value']);
+
+					assert.strictEqual(Array.isArray(parsedFilters.bool.must), true);
+				});
+			});
+
+			[
+				ElasticSearchFilters._formatNe,
+				ElasticSearchFilters._formatNin
+
+			].forEach(formatter => {
+
+				it('should create the bool property when not exists', () => {
+
+					const parsedFilters = {};
+
+					formatter(parsedFilters, 'field', ['value']);
+
+					assert.strictEqual(typeof parsedFilters.bool, 'object');
+				});
+
+				it('should create the bool.must_not property when not exists', () => {
+
+					const parsedFilters = {};
+
+					formatter(parsedFilters, 'field', ['value']);
+
+					assert.strictEqual(Array.isArray(parsedFilters.bool.must_not), true);
+				});
+			});
+
+			[
+				ElasticSearchFilters._formatGt,
+				ElasticSearchFilters._formatGte,
+				ElasticSearchFilters._formatLt,
+				ElasticSearchFilters._formatLte
+
+			].forEach(formatter => {
+
+				it('should create the range property when not exists', () => {
+
+					const parsedFilters = {};
+
+					formatter(parsedFilters, 'field', 'value');
+
+					assert(typeof parsedFilters.range === 'object');
+				});
+
+				it('should create the range[field] property when not exists', async () => {
+
+					const parsedFilters = {};
+
+					formatter(parsedFilters, 'field', 'value');
+
+					assert(typeof parsedFilters.range.field === 'object');
+
+				});
+
+			});
+
+			/* eslint-enable no-underscore-dangle */
+
 		});
 	});
 });

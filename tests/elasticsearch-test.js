@@ -322,11 +322,14 @@ describe('ElasticSearch', () => {
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
-		it('should return false when the insert process rejects', async () => {
+		it('should throw when the insert process rejects', async () => {
 
 			elasticStub.rejects();
 
-			await assert(elastic.insert(model, { item: 'value' }), false);
+			await assert.rejects(elastic.insert(model, { item: 'value' }), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
+			});
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
 			sandbox.assert.calledOnce(elasticStub);
@@ -397,11 +400,14 @@ describe('ElasticSearch', () => {
 			sandbox.assert.calledOnce(elasticStub);
 		});
 
-		it('should return false when bulk insert process rejects', async () => {
+		it('should throw when bulk insert process rejects', async () => {
 
 			elasticStub.rejects();
 
-			assert(!await elastic.multiInsert(model, [{ id: 1, value: 'something' }]));
+			await assert.rejects(elastic.multiInsert(model, [{ id: 1, value: 'something' }]), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
+			});
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
 			sandbox.assert.calledOnce(elasticStub);
@@ -665,7 +671,10 @@ describe('ElasticSearch', () => {
 
 			elasticStub.rejects();
 
-			assert(!await elastic.save(model, { value: 'foobar' }));
+			await assert.rejects(elastic.save(model, { value: 'foobar' }), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
+			});
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
 			sandbox.assert.calledOnce(elasticStub);
@@ -734,7 +743,10 @@ describe('ElasticSearch', () => {
 
 			elasticStub.rejects();
 
-			assert(!await elastic.multiSave(model, [{ value: 'foobar' }]));
+			await assert.rejects(elastic.multiSave(model, [{ value: 'foobar' }]), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
+			});
 
 			sandbox.assert.calledWithMatch(elasticStub, { index: expectedParamsBase.index, refresh: 'wait_for' });
 			sandbox.assert.calledOnce(elasticStub);
