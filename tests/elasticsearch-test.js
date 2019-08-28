@@ -6,7 +6,7 @@ const assert = require('assert');
 
 const sandbox = require('sinon').createSandbox();
 
-const elasticsearch = require('@elastic/elasticsearch');
+const elasticsearch = require('elasticsearch');
 
 const ElasticSearch = require('./../index');
 
@@ -133,9 +133,6 @@ describe('ElasticSearch', () => {
 
 			sandbox.assert.calledOnce(stub);
 			sandbox.assert.calledWithMatch(stub, {
-				amazonES: {
-					credentials: {}
-				},
 				connectionClass: {}
 			});
 		});
@@ -152,7 +149,7 @@ describe('ElasticSearch', () => {
 			assert.doesNotThrow(() => elastic.client);
 
 			sandbox.assert.calledOnce(stub);
-			sandbox.assert.calledWithMatch(stub, { node: 'http://localhost:9300' });
+			sandbox.assert.calledWithMatch(stub, { host: 'http://localhost:9300' });
 		});
 
 		it('should throw when elasticsearch client fails', async () => {
@@ -218,7 +215,7 @@ describe('ElasticSearch', () => {
 
 		it('should create an index (if not exists) and put the mappings parsed from the model into it', async () => {
 
-			elasticStub.exists = sandbox.stub().returns({ body: false });
+			elasticStub.exists = sandbox.stub().returns(false);
 			elasticStub.create = sandbox.stub();
 			elasticStub.putMapping = sandbox.stub();
 
@@ -234,7 +231,7 @@ describe('ElasticSearch', () => {
 
 		it('should put the mappings parsed from the model into the specified index when it already exists', async () => {
 
-			elasticStub.exists = sandbox.stub().returns({ body: true });
+			elasticStub.exists = sandbox.stub().returns(true);
 			elasticStub.putMapping = sandbox.stub();
 
 			await assert.doesNotReject(elastic.buildIndex(model));
@@ -247,7 +244,7 @@ describe('ElasticSearch', () => {
 
 		it('should do nothing when the model doesn\'t have sortable fields', async () => {
 
-			elasticStub.exists = sandbox.stub().returns({ body: false });
+			elasticStub.exists = sandbox.stub().returns(false);
 			elasticStub.create = sandbox.stub();
 			elasticStub.putMapping = sandbox.stub();
 
@@ -284,9 +281,7 @@ describe('ElasticSearch', () => {
 
 			elasticStub.callsFake(params => {
 				return {
-					body: {
-						_id: params.id
-					}
+					_id: params.id
 				};
 			});
 
@@ -300,9 +295,7 @@ describe('ElasticSearch', () => {
 
 			elasticStub.callsFake(params => {
 				return {
-					body: {
-						_id: params.id
-					}
+					_id: params.id
 				};
 			});
 
@@ -321,11 +314,7 @@ describe('ElasticSearch', () => {
 
 		it('should return false when the insert process fails', async () => {
 
-			elasticStub.returns({
-				body: {
-					result: 'error'
-				}
-			});
+			elasticStub.returns({ result: 'error' });
 
 			assert(!await elastic.insert(model, { item: 'value' }));
 
@@ -376,11 +365,7 @@ describe('ElasticSearch', () => {
 
 		it('should leave untouched the field dateCreated of the item when it already exists', async () => {
 
-			elasticStub.returns({
-				body: {
-					errors: false
-				}
-			});
+			elasticStub.returns({ errors: false });
 
 			assert(await elastic.multiInsert(model, { value: 'foobar', dateCreated: 'myDate' }));
 
@@ -443,13 +428,11 @@ describe('ElasticSearch', () => {
 		it('should return the items array when search process is successful without params', async () => {
 
 			elasticStub.returns({
-				body: {
-					hits: {
-						hits: [
-							{ _source: { id: 1, value: 'somevalue', othervalue: 2 } },
-							{ _source: { id: 2, value: 'someothervalue', othervalue: 4 } }
-						]
-					}
+				hits: {
+					hits: [
+						{ _source: { id: 1, value: 'somevalue', othervalue: 2 } },
+						{ _source: { id: 2, value: 'someothervalue', othervalue: 4 } }
+					]
 				}
 			});
 
@@ -464,13 +447,11 @@ describe('ElasticSearch', () => {
 		it('should return the items array when search process is successful with params and filters', async () => {
 
 			elasticStub.returns({
-				body: {
-					hits: {
-						hits: [
-							{ _source: { id: 3, value: 'foobar 3', othervalue: 1 } },
-							{ _source: { id: 4, value: 'foobar 4', othervalue: 1 } }
-						]
-					}
+				hits: {
+					hits: [
+						{ _source: { id: 3, value: 'foobar 3', othervalue: 1 } },
+						{ _source: { id: 4, value: 'foobar 4', othervalue: 1 } }
+					]
 				}
 			});
 
@@ -521,11 +502,7 @@ describe('ElasticSearch', () => {
 			model.lastQueryEmpty = false;
 			delete model.totalsParams;
 
-			elasticStub.returns({
-				body: {
-					count: 1
-				}
-			});
+			elasticStub.returns({ count: 1 });
 
 			assert.deepEqual(await elastic.getTotals(model), {
 				total: 1,
@@ -549,11 +526,7 @@ describe('ElasticSearch', () => {
 				}
 			};
 
-			elasticStub.returns({
-				body: {
-					count: 2
-				}
-			});
+			elasticStub.returns({ count: 2 });
 
 			assert.deepStrictEqual(await elastic.getTotals(model), {
 				total: 2,
@@ -592,11 +565,7 @@ describe('ElasticSearch', () => {
 
 		it('should return updated count when the update process is successful', async () => {
 
-			elasticStub.returns({
-				body: {
-					updated: 5
-				}
-			});
+			elasticStub.returns({ updated: 5 });
 
 			assert(await elastic.update(model, {
 				value: 'mynewvalue',
@@ -628,9 +597,7 @@ describe('ElasticSearch', () => {
 
 			elasticStub.callsFake(params => {
 				return {
-					body: {
-						_id: params.id
-					}
+					_id: params.id
 				};
 			});
 
@@ -644,9 +611,7 @@ describe('ElasticSearch', () => {
 
 			elasticStub.callsFake(params => {
 				return {
-					body: {
-						_id: params.id
-					}
+					_id: params.id
 				};
 			});
 
@@ -667,9 +632,7 @@ describe('ElasticSearch', () => {
 		it('should return false when the upsert process fails', async () => {
 
 			elasticStub.returns({
-				body: {
-					result: ''
-				}
+				result: ''
 			});
 
 			assert(!await elastic.save(model, { value: 'foobar' }));
@@ -696,11 +659,7 @@ describe('ElasticSearch', () => {
 
 		it('should return true when the bulk upsert process is sucessful', async () => {
 
-			elasticStub.returns({
-				body: {
-					errors: false
-				}
-			});
+			elasticStub.returns({ errors: false });
 
 			assert(await elastic.multiSave(model, [{ value: 'foobar' }, { value: 'sarasa' }]));
 
@@ -710,11 +669,7 @@ describe('ElasticSearch', () => {
 
 		it('should leave untouched the field dateCreated of the item when it already exists', async () => {
 
-			elasticStub.returns({
-				body: {
-					errors: false
-				}
-			});
+			elasticStub.returns({ errors: false });
 
 			assert(await elastic.multiSave(model, { value: 'foobar', dateCreated: 'myDate' }));
 
@@ -738,11 +693,7 @@ describe('ElasticSearch', () => {
 
 		it('should return false when the bulk upsert process fails', async () => {
 
-			elasticStub.returns({
-				body: {
-					errors: true
-				}
-			});
+			elasticStub.returns({ errors: true });
 
 			assert(!await elastic.multiSave(model, [{ value: 'foobar' }]));
 
@@ -768,11 +719,7 @@ describe('ElasticSearch', () => {
 
 		it('should return deleted count when the remove process is successful', async () => {
 
-			elasticStub.returns({
-				body: {
-					deleted: 5
-				}
-			});
+			elasticStub.returns({ deleted: 5 });
 
 			assert(await elastic.remove(model, { value: 'foobar' }) === 5);
 
@@ -834,7 +781,7 @@ describe('ElasticSearch', () => {
 					return {
 						value: { type: 'text' },
 						dateCreated: true,
-						lastModified: { type: 'date' }
+						dateModified: { type: 'date' }
 					};
 				}
 			}
@@ -857,7 +804,7 @@ describe('ElasticSearch', () => {
 							}
 						}
 					},
-					lastModified: {
+					dateModified: {
 						type: 'date',
 						fields: {
 							raw: {
@@ -905,7 +852,7 @@ describe('ElasticSearch', () => {
 							}
 						}
 					},
-					lastModified: {
+					dateModified: {
 						type: 'date',
 						fields: {
 							raw: {
