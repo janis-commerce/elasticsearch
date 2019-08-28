@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- AWS Authentication
+### Changed
+- Using `elasticsearch` library instead `@elastic/elasticsearch`
+- `lastModified` field name into `dateModified`
+### Removed
+- @elastic/elasticsearch dependency
+
+## [1.0.0] - 2019-08-27
 ### Added
 - ElasticSearch package
 - Unit tests
