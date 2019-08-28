@@ -198,6 +198,17 @@ describe('ElasticSearch', () => {
 				code: ElasticSearchError.codes.INVALID_MODEL
 			});
 		});
+
+		it('should validate if model doesn\'t have a sortableFields getter', async () => {
+
+			class OtherModel extends Model {
+				static get table() {
+					return 'myTable';
+				}
+			}
+
+			elastic._validateModel(new OtherModel());
+		});
 	});
 
 	describe('buildIndex()', () => {
@@ -769,7 +780,8 @@ describe('ElasticSearch', () => {
 				static get sortableFields() {
 					return {
 						value: { type: 'text' },
-						dateCreated: true
+						dateCreated: true,
+						dateModified: { type: 'date' }
 					};
 				}
 			}
@@ -785,7 +797,68 @@ describe('ElasticSearch', () => {
 						}
 					},
 					dateCreated: {
-						type: 'text'
+						type: 'text',
+						fields: {
+							raw: {
+								type: 'keyword'
+							}
+						}
+					},
+					dateModified: {
+						type: 'date',
+						fields: {
+							raw: {
+								type: 'date'
+							}
+						}
+					}
+				}
+			});
+		});
+
+		it('should add defaults to the elasticsearch mapping query', async () => {
+
+			class OtherModel extends Model {
+				static get sortableFields() {
+					return {
+						value: { type: 'text' }
+					};
+				}
+			}
+
+			assert.deepStrictEqual(elastic._getMappingsFromModel(new OtherModel()), {
+				properties: {
+					value: {
+						type: 'text',
+						fields: {
+							raw: {
+								type: 'keyword'
+							}
+						}
+					},
+					id: {
+						type: 'text',
+						fields: {
+							raw: {
+								type: 'keyword'
+							}
+						}
+					},
+					dateCreated: {
+						type: 'date',
+						fields: {
+							raw: {
+								type: 'date'
+							}
+						}
+					},
+					dateModified: {
+						type: 'date',
+						fields: {
+							raw: {
+								type: 'date'
+							}
+						}
 					}
 				}
 			});
