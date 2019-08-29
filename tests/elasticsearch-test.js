@@ -845,6 +845,7 @@ describe('ElasticSearch', () => {
 
 			[
 				'version_conflict_engine_exception',
+				'search_phase_execution_exception',
 				'mapper_parsing_exception',
 				'parsing_exception'
 
