@@ -6,10 +6,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.0.2] - 2019-08-29
 ### Fixed
 - `getTotals` params obtained from latest `get` operation
-### Added
-- Handling and clear messages for most common ElasticSearch errors
+- Error handling improved, and clear messages added for most common ElasticSearch errors
 
 ## [1.0.1] - 2019-08-28
 ### Fixed
