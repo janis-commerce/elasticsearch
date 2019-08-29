@@ -190,6 +190,10 @@ The codes are the following:
 | 2    | Invalid model                  |
 | 3    | Invalid query                  |
 | 4    | Internal elasticsearch error   |
+| 5    | Invalid filters                |
+| 6    | Invalid filter operator        |
+| 7    | Index not found                |
+| 8    | Index not built                |
 
 ## Usage
 ```js
