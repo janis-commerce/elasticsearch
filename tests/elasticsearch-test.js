@@ -334,22 +334,9 @@ describe('ElasticSearch', () => {
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
 			sandbox.assert.calledOnce(elasticStub);
 		});
-
-		it('should throw when the insert process rejects due a duplicated ID field', async () => {
-
-			elasticStub.rejects(new Error('version_conflict_engine_exception'));
-
-			await assert.rejects(elastic.insert(model, { item: 'value' }), {
-				name: 'ElasticSearchError',
-				code: ElasticSearchError.codes.INVALID_QUERY
-			});
-
-			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
-			sandbox.assert.calledOnce(elasticStub);
-		});
 	});
 
-	describe('multiInsert', () => {
+	describe('multiInsert()', () => {
 
 		it('should return true when bulk insert process is successful', async () => {
 
@@ -403,19 +390,6 @@ describe('ElasticSearch', () => {
 			await assert.rejects(elastic.multiInsert(model, [{ id: 1, value: 'something' }]), {
 				name: 'ElasticSearchError',
 				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
-			});
-
-			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
-			sandbox.assert.calledOnce(elasticStub);
-		});
-
-		it('should throw elasticsearch error when bulk insert process rejects due a duplicated ID field', async () => {
-
-			elasticStub.rejects(new Error('version_conflict_engine_exception'));
-
-			await assert.rejects(elastic.multiInsert(model, [{ id: 1, value: 'something' }]), {
-				name: 'ElasticSearchError',
-				code: ElasticSearchError.codes.INVALID_QUERY
 			});
 
 			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
@@ -863,6 +837,100 @@ describe('ElasticSearch', () => {
 				}
 			});
 		});
+	});
+
+	describe('_handleElasticSearchError()', () => {
+
+		context('when the query is invalid (duplicated ID, bad sortings or filters)', () => {
+
+			[
+				'version_conflict_engine_exception',
+				'mapper_parsing_exception',
+				'parsing_exception'
+
+			].forEach(type => {
+
+				it('should throw an invalid query error', () => {
+
+					const err = {
+						body: {
+							error: { type }
+						}
+					};
+
+					assert.throws(() => elastic._handleElasticSearchError(err), {
+						name: 'ElasticSearchError',
+						code: ElasticSearchError.codes.INVALID_QUERY
+					});
+				});
+			});
+		});
+
+
+		it('should throw an index not found error when the index not exists', async () => {
+
+			const err = {
+				body: {
+					error: {
+						type: 'index_not_found_exception'
+					}
+				}
+			};
+
+			assert.throws(() => elastic._handleElasticSearchError(err), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.INDEX_NOT_FOUND
+			});
+		});
+
+		it('should throw an index not built error when the index mappings not exists', async () => {
+
+			const err = {
+				body: {
+					error: {
+						type: 'query_shard_exception'
+					}
+				}
+			};
+
+			assert.throws(() => elastic._handleElasticSearchError(err), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.INDEX_NOT_BUILT
+			});
+		});
+
+		it('should throw an invalid model error when the sortableFields datatypes are different that already built index mappings', async () => {
+
+			const err = {
+				body: {
+					error: {
+						type: 'illegal_argument_exception'
+					}
+				}
+			};
+
+			assert.throws(() => elastic._handleElasticSearchError(err), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.INVALID_MODEL
+			});
+		});
+
+		it('should throw an elasticsearch error when the error type is not recognized or is not an elasticsearch error', async () => {
+
+			[
+				{ body: { error: { type: 'unknown_elasticsearch_error' } }, message: 'some message' },
+				new Error('some message')
+
+			].forEach(err => {
+
+				assert.throws(() => elastic._handleElasticSearchError(err), {
+					name: 'ElasticSearchError',
+					code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
+				});
+
+			});
+		});
+
 	});
 
 });
