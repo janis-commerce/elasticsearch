@@ -209,6 +209,33 @@ describe('ElasticSearch', () => {
 
 			elastic._validateModel(new OtherModel());
 		});
+
+		it('should not throw invalid model when the table not exists in model but the database settings exists', () => {
+
+			elastic.config.database = 'myNewTable';
+
+			assert.doesNotThrow(() => elastic._validateModel({}));
+
+			elastic.config.database = '';
+		});
+	});
+
+	describe('_getIndex', () => {
+
+		it('should return the model index name converted into snake_case', () => {
+
+			assert.deepStrictEqual(elastic._getIndex(model), 'my_table');
+
+		});
+
+		it('should return the database setting converted into snake_case instead of model table name when the setting exists', async () => {
+
+			elastic.config.database = 'myNewTable';
+
+			assert.deepStrictEqual(elastic._getIndex(model), 'my_new_table');
+
+			elastic.config.database = '';
+		});
 	});
 
 	describe('buildIndex()', () => {
