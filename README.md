@@ -21,6 +21,7 @@ Constructs the Elasticsearch driver instance, connected with the `config [Object
 - user `[String]`: Elasticsearch user for the host.  
 - password `[String]`: Elasticsearch password for the host.  
 - limit `[Number]`: Default limit for getting operations.  
+- database `[String]`: Elasticsearch index name. **This config replaces the model table name (if exists)**.  
 - awsCredentials `[Boolean]`: Set to `true` if you need to use AWS credentials ENV variables for the host connection/authentication.  
 
 **Config usage:**  
@@ -32,6 +33,7 @@ Constructs the Elasticsearch driver instance, connected with the `config [Object
 	user: 'Username', // Default empty
 	password: 'password', // Default empty
 	limit: 10, // Default 500
+	database: 'my_data', // Default empty / model table
 	awsCredentials: true // Default false
 }
 ```
