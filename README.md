@@ -181,19 +181,27 @@ Returns the deleted count `[Number]`
 ## Errors
 
 The errors are informed with a `ElasticSearchError`.
-This object has a code that can be useful for a correct error handling.
+This object has a code that can be useful for a correct error handling.  
+The codes are the following:  
+
+| Code | Description                    |
+|------|--------------------------------|
+| 1    | Invalid model                  |
+| 2    | Invalid query                  |
+| 3    | Internal elasticsearch error   |
+| 4    | Invalid filters                |
+| 5    | Invalid filter operator        |
+| 6    | Index not found                |
+| 7    | Index not built                |
+
+The config validation errors are informed with a `ElasticSearchConfigError`.
+This object has a code that can be useful for a correct error handling.  
 The codes are the following:  
 
 | Code | Description                    |
 |------|--------------------------------|
 | 1    | Invalid config                 |
-| 2    | Invalid model                  |
-| 3    | Invalid query                  |
-| 4    | Internal elasticsearch error   |
-| 5    | Invalid filters                |
-| 6    | Invalid filter operator        |
-| 7    | Index not found                |
-| 8    | Index not built                |
+| 2    | Invalid setting                |
 
 ## Usage
 ```js
