@@ -211,6 +211,26 @@ describe('ElasticSearch', () => {
 		});
 	});
 
+	describe('_getIndex()', () => {
+
+		it('should return the table name from the model converted into snake_case', () => {
+
+			assert.deepStrictEqual(elastic._getIndex(model), 'my_table');
+
+		});
+
+		it('should return the table name with the prefix when it\'s setted in config', () => {
+
+			elastic.config.prefix = 'prefix';
+
+			assert.deepStrictEqual(elastic._getIndex(model), 'my_table.prefix');
+
+			delete elastic.config.prefix;
+
+		});
+
+	});
+
 	describe('buildIndex()', () => {
 
 		it('should create an index (if not exists) and put the mappings parsed from the model into it', async () => {
