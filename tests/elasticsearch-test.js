@@ -66,19 +66,6 @@ describe('ElasticSearch', () => {
 
 	describe('Constructor', () => {
 
-		it('should throw when the config is not valid (not an object or array)', async () => {
-
-			assert.throws(() => new ElasticSearch('config'), {
-				name: 'ElasticSearchError',
-				code: ElasticSearchError.codes.INVALID_CONFIG
-			});
-
-			assert.throws(() => new ElasticSearch(['config']), {
-				name: 'ElasticSearchError',
-				code: ElasticSearchError.codes.INVALID_CONFIG
-			});
-		});
-
 		it('should get the protocol from the host url and set into the config when it exists', () => {
 
 			const newElastic = new ElasticSearch({
