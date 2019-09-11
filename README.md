@@ -14,7 +14,7 @@ npm install --save @janiscommerce/elasticsearch
 
 Constructs the Elasticsearch driver instance, connected with the `config [Object]`.  
 
-**Config definition:**  
+**Config definition (all settings are optional):**  
 - protocol `[String]`: The protocol for the elasticsearch host url, not needed if you use a full url as host.  
 - host `[String]`: Elasticsearch host URL. **In case of the host url includes a protocol, it will replace the actual protocol value in the config**.  
 - port `[Number]`: The port for the elasticsearch host url, not needed if you use a full url as host.  
