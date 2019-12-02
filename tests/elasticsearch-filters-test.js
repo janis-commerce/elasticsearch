@@ -2,9 +2,9 @@
 
 const assert = require('assert');
 
-const ElasticSearchFilters = require('./../lib/elasticsearch-filters');
+const ElasticSearchFilters = require('../lib/elasticsearch-filters');
 
-const ElasticSearchError = require('./../lib/elasticsearch-error');
+const ElasticSearchError = require('../lib/elasticsearch-error');
 
 class Model {
 

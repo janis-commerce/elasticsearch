@@ -6,8 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `distinct` method
+
 ### Fixed
 - `ElasticSearchFilters` field datatypes will be filtered by `raw` only when exists in the model `sortableFields` otherwise will use `keyword` instead.
+
+### Removed
+- unnecessary `index.js` files
 
 ## [1.1.0] - 2019-09-12
 ### Added

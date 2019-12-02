@@ -180,6 +180,15 @@ Removes the item or items that matches the filters from the elasticsearch.
 Requires a `model [Model]` and `filters [Object]`  
 Returns the deleted count `[Number]`  
 
+### ***async*** `distinct(model, {params})`
+
+Requires a `model [Model]` and `params [Object]`  
+Returns an `[String array]` with the unique values of the key field from elasticsearch.  
+
+Parameters:  
+* key `[String]` (required): The key field name  
+* filters `[Object]` (optional): Search filters, leave empty for all items.  
+
 ## Errors
 
 The errors are informed with a `ElasticSearchError`.
@@ -195,6 +204,7 @@ The codes are the following:
 | 5    | Invalid filter operator        |
 | 6    | Index not found                |
 | 7    | Index not built                |
+| 8    | Invalid distinct key           |
 
 The config validation errors are informed with a `ElasticSearchConfigError`.
 This object has a code that can be useful for a correct error handling.  
@@ -271,6 +281,11 @@ const model = new Model();
 			value: ['foobar']
 		} 
 	}); // expected return: 3
+
+	// distinct
+	result = await elastic.distinct(model, {
+		key: 'myField';
+	}); // expected return: ['my-value', 'my-other-value']
 })
 
 ```

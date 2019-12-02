@@ -8,9 +8,9 @@ const sandbox = require('sinon').createSandbox();
 
 const elasticsearch = require('elasticsearch');
 
-const ElasticSearch = require('./../index');
+const ElasticSearch = require('../lib/elasticsearch');
 
-const ElasticSearchError = require('./../lib/elasticsearch-error');
+const ElasticSearchError = require('../lib/elasticsearch-error');
 
 class Model {
 
@@ -941,4 +941,85 @@ describe('ElasticSearch', () => {
 
 	});
 
+	describe('distinct()', () => {
+
+		it('should return the items array when search process is successful without filters', async () => {
+
+			elasticStub.returns({
+				aggregations: {
+					distinct: {
+						buckets: [
+							{ key: 'value' },
+							{ key: 'some-value' }
+						]
+					}
+				}
+			});
+
+			const result = await elastic.distinct(model, { key: 'myField' });
+
+			assert.deepStrictEqual(result, ['value', 'some-value']);
+
+			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
+			sandbox.assert.calledOnce(elasticStub);
+		});
+
+		it('should return the items array when search process is successful with filters', async () => {
+
+			elasticStub.returns({
+				aggregations: {
+					distinct: {
+						buckets: [
+							{ key: 'value' },
+							{ key: 'some-value' }
+						]
+					}
+				}
+			});
+
+			const result = await elastic.distinct(model, {
+				key: 'myField',
+				filters: {
+					someField: 'myFilter'
+				}
+			});
+
+			assert.deepStrictEqual(result, ['value', 'some-value']);
+
+			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
+			sandbox.assert.calledOnce(elasticStub);
+		});
+
+		it('should throw invalid distinct key error when the key not exists', async () => {
+
+			await assert.rejects(elastic.distinct(model), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.INVALID_DISTINCT_KEY
+			});
+		});
+
+		[null, 1, ['array'], { some: 'object' }].forEach(key => {
+
+			it('should throw invalid distinct key error when the key is not a string', async () => {
+
+				await assert.rejects(elastic.distinct(model, { key }), {
+					name: 'ElasticSearchError',
+					code: ElasticSearchError.codes.INVALID_DISTINCT_KEY
+				});
+			});
+		});
+
+		it('should throw elasticsearch error when the search process rejects', async () => {
+
+			elasticStub.rejects();
+
+			await assert.rejects(elastic.distinct(model, { key: 'myField' }), {
+				name: 'ElasticSearchError',
+				code: ElasticSearchError.codes.ELASTICSEARCH_ERROR
+			});
+
+			sandbox.assert.calledWithMatch(elasticStub, expectedParamsBase);
+			sandbox.assert.calledOnce(elasticStub);
+		});
+	});
 });

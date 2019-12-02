@@ -2,13 +2,13 @@
   "name": "@janiscommerce/elasticsearch",
   "version": "1.1.0",
   "description": "An AWS ElasticSearch Driver",
-  "main": "index.js",
+  "main": "lib/elasticsearch.js",
   "scripts": {
     "test": "export TEST_ENV=true; mocha --exit -R nyan --recursive tests/",
     "test-ci": "nyc --reporter=html --reporter=text mocha --recursive tests/",
     "watch-test": "export TEST_ENV=true; mocha --exit -R nyan -w --recursive tests/",
     "coverage": "nyc npm test",
-    "lint": "eslint index.js lib/ tests/"
+    "lint": "eslint lib/ tests/"
   },
   "repository": {
     "type": "git",

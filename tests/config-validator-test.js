@@ -2,9 +2,9 @@
 
 const assert = require('assert');
 
-const ConfigValidator = require('./../lib/config-validator');
+const ConfigValidator = require('../lib/config-validator');
 
-const { ElasticSearchConfigError } = require('./../lib');
+const ElasticSearchConfigError = require('../lib/elasticsearch-config-error');
 
 describe('ConfigValidator', () => {
 
