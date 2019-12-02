@@ -6,6 +6,23 @@ const ElasticSearchFilters = require('./../lib/elasticsearch-filters');
 
 const ElasticSearchError = require('./../lib/elasticsearch-error');
 
+class Model {
+
+	static get table() {
+		return 'myTable';
+	}
+
+	static get sortableFields() {
+		return {
+			id: true,
+			value: true,
+			othervalue: { type: 'integer' }
+		};
+	}
+}
+
+const model = new Model();
+
 describe('ElasticSearchFilters', () => {
 
 	describe('getFilters()', () => {
@@ -13,9 +30,9 @@ describe('ElasticSearchFilters', () => {
 		it('should return the elasticsearch query (term only)', () => {
 
 			const termFilters = {
-				field: 'value',
+				id: 'value',
 				$eq: {
-					field: 'value'
+					id: 'value'
 				},
 				$ne: {
 					field: 'value'
@@ -28,14 +45,14 @@ describe('ElasticSearchFilters', () => {
 				}
 			};
 
-			assert.deepStrictEqual(ElasticSearchFilters.getFilters(termFilters), {
+			assert.deepStrictEqual(ElasticSearchFilters.getFilters(model, termFilters), {
 				query: {
 					bool: {
 						must: [
-							{ term: { 'field.raw': 'value' } },	{ terms: { field: ['value'] } }
+							{ term: { 'id.raw': 'value' } },	{ terms: { field: ['value'] } }
 						],
 						must_not: [
-							{ term: { 'field.raw': 'value' } }, { terms: { field: ['value'] } }
+							{ term: { 'field.keyword': 'value' } }, { terms: { field: ['value'] } }
 						]
 					}
 				}
@@ -59,7 +76,7 @@ describe('ElasticSearchFilters', () => {
 				}
 			};
 
-			assert.deepStrictEqual(ElasticSearchFilters.getFilters(rangeFilters), {
+			assert.deepStrictEqual(ElasticSearchFilters.getFilters(model, rangeFilters), {
 				query: {
 					range: {
 						id: {
@@ -96,7 +113,7 @@ describe('ElasticSearchFilters', () => {
 				}
 			};
 
-			assert.deepStrictEqual(ElasticSearchFilters.getFilters(mixedFilters), {
+			assert.deepStrictEqual(ElasticSearchFilters.getFilters(model, mixedFilters), {
 				query: {
 					bool: {
 						must: [
@@ -112,7 +129,7 @@ describe('ElasticSearchFilters', () => {
 							}
 						],
 						must_not: [
-							{ term: { 'field.raw': 'value' } }, { terms: { field: ['value'] } }
+							{ term: { 'field.keyword': 'value' } }, { terms: { field: ['value'] } }
 						]
 					}
 				}
@@ -121,7 +138,7 @@ describe('ElasticSearchFilters', () => {
 
 		it('should throw \'Invalid filters\' when the $in terms values aren\'t an array', async () => {
 
-			assert.throws(() => ElasticSearchFilters.getFilters({
+			assert.throws(() => ElasticSearchFilters.getFilters(model, {
 				$in: 'not-array'
 			}), {
 				name: 'ElasticSearchError',
@@ -132,7 +149,7 @@ describe('ElasticSearchFilters', () => {
 
 		it('should throw \'Invalid filters\' when the $nin terms values aren\'t an array', async () => {
 
-			assert.throws(() => ElasticSearchFilters.getFilters({
+			assert.throws(() => ElasticSearchFilters.getFilters(model, {
 				$nin: 'not-array'
 			}), {
 				name: 'ElasticSearchError',
@@ -145,7 +162,7 @@ describe('ElasticSearchFilters', () => {
 
 			it('should throw \'Invalid filter operator\' when any of the received operator not exists', async () => {
 
-				assert.throws(() => ElasticSearchFilters.getFilters({
+				assert.throws(() => ElasticSearchFilters.getFilters(model, {
 					$eq: { field: 'value' },
 					$eqq: { field: 'value' }
 				}), {
@@ -156,21 +173,21 @@ describe('ElasticSearchFilters', () => {
 			});
 
 			it('should throw \'Invalid filters\' when the filters not exists', async () => {
-				assert.throws(() => ElasticSearchFilters.getFilters(), {
+				assert.throws(() => ElasticSearchFilters.getFilters(model), {
 					name: 'ElasticSearchError',
 					code: ElasticSearchError.codes.INVALID_FILTERS
 				});
 			});
 
 			it('should throw \'Invalid filters\' when the filters is not an object', async () => {
-				assert.throws(() => ElasticSearchFilters.getFilters('filters'), {
+				assert.throws(() => ElasticSearchFilters.getFilters(model, 'filters'), {
 					name: 'ElasticSearchError',
 					code: ElasticSearchError.codes.INVALID_FILTERS
 				});
 			});
 
 			it('should throw \'Invalid filters\' when the filters is an array', async () => {
-				assert.throws(() => ElasticSearchFilters.getFilters(['filters']), {
+				assert.throws(() => ElasticSearchFilters.getFilters(model, ['filters']), {
 					name: 'ElasticSearchError',
 					code: ElasticSearchError.codes.INVALID_FILTERS
 				});
@@ -182,7 +199,7 @@ describe('ElasticSearchFilters', () => {
 			/* eslint-disable no-underscore-dangle */
 
 			[
-				ElasticSearchFilters._formatEq,
+				ElasticSearchFilters._formatEq.bind(ElasticSearchFilters),
 				ElasticSearchFilters._formatIn
 
 			].forEach(formatter => {
@@ -207,7 +224,7 @@ describe('ElasticSearchFilters', () => {
 			});
 
 			[
-				ElasticSearchFilters._formatNe,
+				ElasticSearchFilters._formatNe.bind(ElasticSearchFilters),
 				ElasticSearchFilters._formatNin
 
 			].forEach(formatter => {
