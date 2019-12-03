@@ -1,6 +1,6 @@
 {
   "name": "@janiscommerce/elasticsearch",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "An AWS ElasticSearch Driver",
   "main": "lib/elasticsearch.js",
   "scripts": {
