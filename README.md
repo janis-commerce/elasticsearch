@@ -23,6 +23,8 @@ Constructs the Elasticsearch driver instance, connected with the `config [Object
 - limit `[Number]`: Default limit for getting operations.  
 - prefix `[String]`: Prefix for table name, if it's setted, any operation will use the model table name with the prefix. Ex: `table.prefix`.  
 - awsCredentials `[Boolean]`: Set to `true` if you need to use AWS credentials ENV variables for the host connection/authentication.  
+- requestTimeout `[Number]`: The max timeout for operation in miliseconds, default 4000 (4s).  
+- maxRetries `[Number]`: The max retries for operation, default 3.
 
 **Config usage:**  
 ```js
@@ -34,7 +36,9 @@ Constructs the Elasticsearch driver instance, connected with the `config [Object
 	password: 'password', // Default empty
 	limit: 10, // Default 500
 	prefix: 'products', // Default empty
-	awsCredentials: true // Default false
+	awsCredentials: true, // Default false
+	requestTimeout: 2000, // Default 4000
+	maxRetries: 1 // Default 3
 }
 ```
 
